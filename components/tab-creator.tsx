@@ -1,15 +1,14 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { TabEditor } from "./tab-editor"
+import { Fretboard } from "./fretboard"
+import { TabDisplay } from "./tab-display"
 import { SavedTabs } from "./saved-tabs"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "@/components/ui/use-toast"
 import { Toaster } from "@/components/ui/toaster"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { ChevronDown } from "lucide-react"
 import html2canvas from "html2canvas"
 
 export type TabRow = {
@@ -24,34 +23,15 @@ export type TabRow = {
 export type SavedTab = {
   id: string
   name: string
-  rows: TabRow[]
-}
-
-// Add a NotationGuide component
-function NotationGuide() {
-  return (
-    <Collapsible className="mt-4 w-full">
-      <CollapsibleTrigger className="flex items-center justify-between w-full p-2 bg-muted rounded-md">
-        <span className="font-medium">Notation Guide</span>
-        <ChevronDown className="h-4 w-4" />
-      </CollapsibleTrigger>
-      <CollapsibleContent className="p-2 bg-card rounded-md mt-2 grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
-        <div>h - Hammer-on</div>
-        <div>p - Pull-off</div>
-        <div>b - Bend</div>
-        <div>/ - Slide up</div>
-        <div>\ - Slide down</div>
-        <div>~ - Vibrato</div>
-      </CollapsibleContent>
-    </Collapsible>
-  )
+  selectedNotes: { [key: string]: { [key: number]: string } }
 }
 
 export function TabCreator() {
-  const [tabRows, setTabRows] = useState<TabRow[]>([createEmptyRow()])
+  const [selectedNotes, setSelectedNotes] = useState<{ [key: string]: { [key: number]: string } }>({})
   const [tabName, setTabName] = useState("")
   const [savedTabs, setSavedTabs] = useState<SavedTab[]>([])
-  const tabEditorRef = useRef<HTMLDivElement>(null)
+  const [useStringNumbers, setUseStringNumbers] = useState(false)
+  const tabRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const savedTabsFromStorage = localStorage.getItem("savedTabs")
@@ -60,29 +40,35 @@ export function TabCreator() {
     }
   }, [])
 
-  function createEmptyRow(): TabRow {
-    return {
-      "1": Array(16).fill(""),
-      "2": Array(16).fill(""),
-      "3": Array(16).fill(""),
-      "4": Array(16).fill(""),
-      "5": Array(16).fill(""),
-      "6": Array(16).fill(""),
-    }
+  const handleAddNote = (string: string, fret: number, note: string) => {
+    setSelectedNotes((prev) => {
+      const newNotes = { ...prev }
+      if (!newNotes[string]) {
+        newNotes[string] = {}
+      }
+      newNotes[string][fret] = note
+      return newNotes
+    })
   }
 
-  const addRow = () => {
-    setTabRows([...tabRows, createEmptyRow()])
+  const handleClearNote = (string: string, fret: number) => {
+    setSelectedNotes((prev) => {
+      const newNotes = { ...prev }
+      if (newNotes[string] && newNotes[string][fret] !== undefined) {
+        const { [fret]: _, ...rest } = newNotes[string]
+        newNotes[string] = rest
+        // If string has no more notes, remove the string entry
+        if (Object.keys(newNotes[string]).length === 0) {
+          const { [string]: _, ...restStrings } = newNotes
+          return restStrings
+        }
+      }
+      return newNotes
+    })
   }
 
   const clearTab = () => {
-    setTabRows([createEmptyRow()])
-  }
-
-  const updateTabCell = (rowIndex: number, string: keyof TabRow, cellIndex: number, value: string) => {
-    const newRows = [...tabRows]
-    newRows[rowIndex][string][cellIndex] = value
-    setTabRows(newRows)
+    setSelectedNotes({})
   }
 
   const saveTab = () => {
@@ -94,10 +80,18 @@ export function TabCreator() {
       return
     }
 
+    if (Object.keys(selectedNotes).length === 0) {
+      toast({
+        title: "Add some notes to save",
+        duration: 2000,
+      })
+      return
+    }
+
     const newTab: SavedTab = {
       id: Date.now().toString(),
       name: tabName,
-      rows: tabRows,
+      selectedNotes: { ...selectedNotes },
     }
 
     const updatedTabs = [...savedTabs, newTab]
@@ -113,7 +107,7 @@ export function TabCreator() {
   }
 
   const loadTab = (tab: SavedTab) => {
-    setTabRows(tab.rows)
+    setSelectedNotes(tab.selectedNotes)
     setTabName(tab.name)
   }
 
@@ -123,64 +117,26 @@ export function TabCreator() {
     localStorage.setItem("savedTabs", JSON.stringify(updatedTabs))
   }
 
-  const exportTab = () => {
-    let tabText = ""
-
-    if (tabName) {
-      tabText += `${tabName}\n\n`
-    }
-
-    tabRows.forEach((row) => {
-      tabText += `1|${row["1"].join("-")}|\n`
-      tabText += `2|${row["2"].join("-")}|\n`
-      tabText += `3|${row["3"].join("-")}|\n`
-      tabText += `4|${row["4"].join("-")}|\n`
-      tabText += `5|${row["5"].join("-")}|\n`
-      tabText += `6|${row["6"].join("-")}|\n\n`
-    })
-
-    navigator.clipboard.writeText(tabText)
-
-    toast({
-      title: "Copied to clipboard!",
-      duration: 2000,
-    })
-  }
-
   const exportAsScreenshot = async () => {
-    if (!tabEditorRef.current) return
+    if (!tabRef.current) return
 
     try {
-      // Create a wrapper div for the screenshot that includes the title
-      const screenshotWrapper = document.createElement("div")
-      screenshotWrapper.style.backgroundColor = "#ffffff"
-      screenshotWrapper.style.padding = "20px"
-      screenshotWrapper.style.borderRadius = "8px"
-
-      // Add the title if it exists
-      if (tabName) {
-        const titleElement = document.createElement("h2")
-        titleElement.textContent = tabName
-        titleElement.style.textAlign = "center"
-        titleElement.style.marginBottom = "16px"
-        titleElement.style.fontFamily = "sans-serif"
-        titleElement.style.fontSize = "24px"
-        screenshotWrapper.appendChild(titleElement)
-      }
-
-      // Clone the tab editor content
-      const tabEditorClone = tabEditorRef.current.cloneNode(true)
-      screenshotWrapper.appendChild(tabEditorClone)
-
-      // Temporarily add to document, take screenshot, then remove
-      document.body.appendChild(screenshotWrapper)
-
-      const canvas = await html2canvas(screenshotWrapper, {
-        backgroundColor: "#ffffff",
+      // Use the entire tab content for the screenshot
+      const canvas = await html2canvas(tabRef.current, {
+        backgroundColor: "#0f172a", // Dark background
         scale: 2, // Higher resolution
+        logging: false,
+        useCORS: true,
+        allowTaint: true,
+        onclone: (document, element) => {
+          // Make sure all pre elements preserve whitespace
+          const preElements = element.querySelectorAll("pre")
+          preElements.forEach((pre) => {
+            pre.style.whiteSpace = "pre"
+            pre.style.fontFamily = "monospace"
+          })
+        },
       })
-
-      document.body.removeChild(screenshotWrapper)
 
       const image = canvas.toDataURL("image/png")
       const link = document.createElement("a")
@@ -208,20 +164,28 @@ export function TabCreator() {
         <h1 className="text-2xl md:text-3xl font-bold">Sergio's Tab Generator</h1>
       </div>
 
-      <div className="bg-white p-2 md:p-6 rounded-lg shadow-sm" ref={tabEditorRef}>
+      <div className="bg-card p-2 md:p-6 rounded-lg shadow-sm" ref={tabRef}>
         {tabName && <h2 className="text-xl font-bold text-center mb-2 md:mb-4">{tabName}</h2>}
-        <TabEditor tabRows={tabRows} updateTabCell={updateTabCell} />
+
+        <div className="flex justify-end mb-2">
+          <Button variant="outline" size="sm" onClick={() => setUseStringNumbers(!useStringNumbers)}>
+            {useStringNumbers ? "Use String Names" : "Use String Numbers"}
+          </Button>
+        </div>
+
+        <Fretboard
+          onAddNote={handleAddNote}
+          selectedNotes={selectedNotes}
+          onClearNote={handleClearNote}
+          useStringNumbers={useStringNumbers}
+        />
+
+        <TabDisplay selectedNotes={selectedNotes} tabName={tabName} />
       </div>
 
       <div className="flex flex-wrap gap-1 md:gap-2 mt-2 md:mt-4">
-        <Button onClick={addRow} size="sm" className="text-xs md:text-sm md:size-default">
-          Add Row
-        </Button>
-        <Button variant="outline" onClick={clearTab} size="sm" className="text-xs md:text-sm md:size-default">
+        <Button onClick={clearTab} size="sm" className="text-xs md:text-sm md:size-default">
           Clear Tab
-        </Button>
-        <Button variant="outline" onClick={exportTab} size="sm" className="text-xs md:text-sm md:size-default">
-          Copy to Clipboard
         </Button>
         <Button variant="outline" onClick={exportAsScreenshot} size="sm" className="text-xs md:text-sm md:size-default">
           Export as Image
@@ -241,8 +205,6 @@ export function TabCreator() {
           </Button>
         </div>
       </div>
-
-      <NotationGuide />
 
       <SavedTabs savedTabs={savedTabs} loadTab={loadTab} deleteTab={deleteTab} />
 
