@@ -12,9 +12,8 @@ export function TabEditor({ tabRows, updateTabCell }: TabEditorProps) {
   const strings: (keyof TabRow)[] = ["1", "2", "3", "4", "5", "6"]
 
   const handleInputChange = (rowIndex: number, string: keyof TabRow, cellIndex: number, value: string) => {
-    // Allow numbers, letters, and common guitar notation symbols
-    // This includes: numbers, h (hammer-on), p (pull-off), b (bend), / \ (slides), ~ (vibrato), etc.
-    if (/^[0-9a-zA-Z/\\$$$$[\]{}.,\-_+=*&^%$#@!?><~`'";:hp\b\r\t\s]{1,3}$/.test(value)) {
+    // Allow empty values, numbers, letters, and common guitar notation symbols
+    if (value === "" || /^[0-9a-zA-Z/\\$$$$[\]{}.,\-_+=*&^%$#@!?><~`'";:hp\b\r\t\s]{1,3}$/.test(value)) {
       updateTabCell(rowIndex, string, cellIndex, value)
     }
   }
