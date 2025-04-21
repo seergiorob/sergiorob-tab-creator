@@ -1,10 +1,8 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { useLanguage } from "./language-provider"
 import { TabEditor } from "./tab-editor"
 import { SavedTabs } from "./saved-tabs"
-import { LanguageSwitcher } from "./language-switcher"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -31,28 +29,25 @@ export type SavedTab = {
 
 // Add a NotationGuide component
 function NotationGuide() {
-  const { t } = useLanguage()
-
   return (
-    <Collapsible className="mt-6 w-full">
+    <Collapsible className="mt-4 w-full">
       <CollapsibleTrigger className="flex items-center justify-between w-full p-2 bg-muted rounded-md">
-        <span className="font-medium">{t("notationGuide")}</span>
+        <span className="font-medium">Notation Guide</span>
         <ChevronDown className="h-4 w-4" />
       </CollapsibleTrigger>
-      <CollapsibleContent className="p-4 bg-card rounded-md mt-2 grid grid-cols-1 md:grid-cols-3 gap-2">
-        <div>{t("hammerOn")}</div>
-        <div>{t("pullOff")}</div>
-        <div>{t("bend")}</div>
-        <div>{t("slideUp")}</div>
-        <div>{t("slideDown")}</div>
-        <div>{t("vibrato")}</div>
+      <CollapsibleContent className="p-2 bg-card rounded-md mt-2 grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+        <div>h - Hammer-on</div>
+        <div>p - Pull-off</div>
+        <div>b - Bend</div>
+        <div>/ - Slide up</div>
+        <div>\ - Slide down</div>
+        <div>~ - Vibrato</div>
       </CollapsibleContent>
     </Collapsible>
   )
 }
 
 export function TabCreator() {
-  const { t } = useLanguage()
   const [tabRows, setTabRows] = useState<TabRow[]>([createEmptyRow()])
   const [tabName, setTabName] = useState("")
   const [savedTabs, setSavedTabs] = useState<SavedTab[]>([])
@@ -93,7 +88,7 @@ export function TabCreator() {
   const saveTab = () => {
     if (!tabName.trim()) {
       toast({
-        title: t("enterTabName"),
+        title: "Enter tab name",
         duration: 2000,
       })
       return
@@ -110,7 +105,7 @@ export function TabCreator() {
     localStorage.setItem("savedTabs", JSON.stringify(updatedTabs))
 
     toast({
-      title: `${t("saveTab")}: ${tabName}`,
+      title: `Tab saved: ${tabName}`,
       duration: 2000,
     })
 
@@ -147,7 +142,7 @@ export function TabCreator() {
     navigator.clipboard.writeText(tabText)
 
     toast({
-      title: t("copied"),
+      title: "Copied to clipboard!",
       duration: 2000,
     })
   }
@@ -194,13 +189,13 @@ export function TabCreator() {
       link.click()
 
       toast({
-        title: t("screenshotExported"),
+        title: "Screenshot exported!",
         duration: 2000,
       })
     } catch (error) {
       console.error("Error exporting screenshot:", error)
       toast({
-        title: t("screenshotError"),
+        title: "Error exporting screenshot",
         variant: "destructive",
         duration: 2000,
       })
@@ -209,37 +204,40 @@ export function TabCreator() {
 
   return (
     <div className="container mx-auto max-w-4xl">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">{t("appTitle")}</h1>
-        <LanguageSwitcher />
+      <div className="mb-4 md:mb-6">
+        <h1 className="text-2xl md:text-3xl font-bold">Sergio's Tab Generator</h1>
       </div>
 
-      <div className="bg-white p-6 rounded-lg shadow-sm" ref={tabEditorRef}>
-        {tabName && <h2 className="text-xl font-bold text-center mb-4">{tabName}</h2>}
+      <div className="bg-white p-2 md:p-6 rounded-lg shadow-sm" ref={tabEditorRef}>
+        {tabName && <h2 className="text-xl font-bold text-center mb-2 md:mb-4">{tabName}</h2>}
         <TabEditor tabRows={tabRows} updateTabCell={updateTabCell} />
       </div>
 
-      <div className="flex flex-wrap gap-2 mt-4">
-        <Button onClick={addRow}>{t("addRow")}</Button>
-        <Button variant="outline" onClick={clearTab}>
-          {t("clearTab")}
+      <div className="flex flex-wrap gap-1 md:gap-2 mt-2 md:mt-4">
+        <Button onClick={addRow} size="sm" className="text-xs md:text-sm md:size-default">
+          Add Row
         </Button>
-        <Button variant="outline" onClick={exportTab}>
-          {t("copyToClipboard")}
+        <Button variant="outline" onClick={clearTab} size="sm" className="text-xs md:text-sm md:size-default">
+          Clear Tab
         </Button>
-        <Button variant="outline" onClick={exportAsScreenshot}>
-          {t("exportScreenshot")}
+        <Button variant="outline" onClick={exportTab} size="sm" className="text-xs md:text-sm md:size-default">
+          Copy to Clipboard
+        </Button>
+        <Button variant="outline" onClick={exportAsScreenshot} size="sm" className="text-xs md:text-sm md:size-default">
+          Export as Image
         </Button>
       </div>
 
-      <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="mt-4 md:mt-6 grid grid-cols-1 md:grid-cols-3 gap-2 md:gap-4">
         <div className="md:col-span-2">
-          <Label htmlFor="tabName">{t("tabName")}</Label>
+          <Label htmlFor="tabName" className="text-sm">
+            Tab Name
+          </Label>
           <Input id="tabName" value={tabName} onChange={(e) => setTabName(e.target.value)} className="mt-1" />
         </div>
         <div className="flex items-end">
           <Button onClick={saveTab} className="w-full">
-            {t("save")}
+            Save
           </Button>
         </div>
       </div>

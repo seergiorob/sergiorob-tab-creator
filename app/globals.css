@@ -61,3 +61,21 @@
 .grid-cols-16 {
   grid-template-columns: repeat(16, minmax(0, 1fr));
 }
+
+/* Ensure horizontal scrolling works properly on mobile */
+@media (max-width: 640px) {
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Reduce input padding on mobile */
+@media (max-width: 640px) {
+  .p-0 {
+    padding: 0 !important;
+  }
+
+  input.h-6 {
+    height: 1.5rem !important;
+  }
+}
